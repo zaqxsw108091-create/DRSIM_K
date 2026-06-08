@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRSIM-K v4 | 군 드론 조종 시뮬레이터</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══════════════ MENU ══════════════ -->
+<div id="sm" class="scr on">
+  <div class="m-logo">DRSIM-K</div>
+  <div class="m-sub">대한민국 군 드론 조종 훈련 시뮬레이터 v4.0</div>
+  <div class="m-btns">
+    <button class="m-btn" onclick="toSet()">▶&ensp;훈련 시작</button>
+    <button class="m-btn" onclick="openMan()">📋&ensp;조종 매뉴얼 / 드론 정보</button>
+    <button class="m-btn" onclick="alert('DRSIM-K v4.0\n\n• 20종 군용 드론 — 기종별 전용 3D 모델\n• 1인칭 FPV / 3인칭 추적 카메라\n• 5종 지형 (절차적 생성)\n• 8종 실전 미션 (정찰/타격/방어)\n• 현실 비행 물리 시뮬레이션\n• 키보드 + PS/Xbox 게임패드 지원')">ℹ&ensp;시스템 정보</button>
+  </div>
+  <div class="m-ver">DRSIM-K v4.0 · ROK MILITARY DRONE SIM</div>
+</div>
+
+<!-- ══════════════ SETTINGS ══════════════ -->
+<div id="ss" class="scr">
+  <div class="s-hdr">⚙&ensp;비행 설정</div>
+  <div class="s-body">
+
+    <!-- 비행 모드 -->
+    <div class="s-sec" style="grid-column:1/-1">
+      <div class="s-ttl">◈ 비행 모드</div>
+      <div class="mc-row">
+        <div class="mc sel" id="mcp" tabindex="0" onclick="setMode('p')" onkeydown="if(event.code==='Space'||event.code==='Enter')setMode('p')"><div class="mi">🕹</div><div class="mn">자유 비행 연습</div><div class="md">제한 없이 자유롭게 비행하며 조종 기술을 연습</div></div>
+        <div class="mc" id="mcm" tabindex="0" onclick="setMode('m')" onkeydown="if(event.code==='Space'||event.code==='Enter')setMode('m')"><div class="mi">🎯</div><div class="mn">상황별 미션</div><div class="md">실전 상황 기반 작전 임무 수행</div></div>
+      </div>
+    </div>
+
+    <!-- 드론 선택 -->
+    <div class="s-sec" style="grid-column:1/-1">
+      <div class="s-ttl">◈ 드론 선택</div>
+      <div class="ftabs">
+        <button class="ftab on" onclick="fD('all',this)">전체</button>
+        <button class="ftab" onclick="fD('정찰',this)">🔵 정찰</button>
+        <button class="ftab" onclick="fD('공격',this)">🔴 공격</button>
+        <button class="ftab" onclick="fD('방어',this)">🟠 방어</button>
+        <button class="ftab" onclick="fD('지원',this)">🟢 지원</button>
+        <button class="ftab" onclick="fD('소형',this)">⚪ 소형</button>
+      </div>
+      <div class="d-grid" id="dgrid"></div>
+    </div>
+
+    <!-- 카메라 시점 -->
+    <div class="s-sec">
+      <div class="s-ttl">◈ 카메라 시점</div>
+      <div class="cam-row">
+        <div class="co sel" id="co3" onclick="setCam('3rd')">
+          <div class="ci">🎥</div><div class="cn">3인칭 추적</div>
+          <div class="cd">드론 뒤에서 따라가는 시점<br>초보자 추천</div>
+        </div>
+        <div class="co" id="cof" onclick="setCam('fpv')">
+          <div class="ci">👁</div><div class="cn">1인칭 FPV</div>
+          <div class="cd">드론 카메라 시점<br>실전과 동일</div>
+        </div>
+      </div>
+      <div class="tip" style="margin-top:.5rem;font-size:.65rem">💡 비행 중 <b>V키</b>로 시점 전환 가능</div>
+    </div>
+
+    <!-- 지형/미션 -->
+    <div class="s-sec">
+      <div class="s-ttl">◈ 지형 / 미션</div>
+      <div class="f-row"><div class="f-lbl">훈련 지형</div>
+        <select class="hsel" id="s-map">
+          <option value="plain">평야 — GOP 비무장지대</option>
+          <option value="mountain">산악 — 강원도 산악지형</option>
+          <option value="sea">해상 — 동해 해안선</option>
+          <option value="urban">도심 — 시가전 훈련장</option>
+          <option value="military">군 훈련장 — 실전 훈련맵</option>
+        </select>
+      </div>
+      <div id="mr" style="display:none">
+        <div class="f-lbl" style="margin-bottom:.45rem">임무 분류</div>
+        <div class="ftabs" id="mis-cats">
+          <button class="ftab on" onclick="filterMis('정찰',this)">🔵 정찰</button>
+          <button class="ftab" onclick="filterMis('타격',this)">🔴 타격</button>
+          <button class="ftab" onclick="filterMis('방어',this)">🟢 방어</button>
+        </div>
+        <div class="f-row"><div class="f-lbl">미션 선택</div>
+          <select class="hsel" id="s-mis"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 날씨 -->
+    <div class="s-sec">
+      <div class="s-ttl">◈ 기상 조건</div>
+      <div class="f-row"><div class="f-lbl">날씨</div>
+        <select class="hsel" id="s-wx">
+          <option value="clear">맑음</option><option value="cloudy">흐림</option>
+          <option value="rain">비</option><option value="fog">안개</option><option value="storm">폭풍</option>
+        </select>
+      </div>
+      <div class="sl-row"><div class="sl-lbl">바람 세기</div>
+        <input type="range" id="sl-w" min="0" max="100" value="10" oninput="document.getElementById('vw').textContent=this.value+'%'">
+        <div class="sl-val" id="vw">10%</div>
+      </div>
+      <div class="f-row"><div class="f-lbl">풍향</div>
+        <select class="hsel" id="s-wd">
+          <option value="0">북풍 N</option><option value="45">북동풍 NE</option><option value="90">동풍 E</option>
+          <option value="135">남동풍 SE</option><option value="180">남풍 S</option><option value="225">남서풍 SW</option>
+          <option value="270">서풍 W</option><option value="315">북서풍 NW</option>
+        </select>
+      </div>
+      <div class="sl-row"><div class="sl-lbl">난기류</div>
+        <input type="range" id="sl-t" min="0" max="100" value="6" oninput="document.getElementById('vt').textContent=this.value+'%'">
+        <div class="sl-val" id="vt">6%</div>
+      </div>
+    </div>
+
+    <!-- 조종 -->
+    <div class="s-sec">
+      <div class="s-ttl">◈ 조종 / 난이도</div>
+      <div class="f-row"><div class="f-lbl">조종 방식</div>
+        <select class="hsel" id="s-ct">
+          <option value="kb">키보드 (WASD + 방향키)</option>
+          <option value="gp">게임패드 (PS / Xbox)</option>
+          <option value="both">키보드 + 게임패드</option>
+        </select>
+      </div>
+      <div class="sl-row"><div class="sl-lbl">조종 감도</div>
+        <input type="range" id="sl-s" min="20" max="180" value="85" oninput="document.getElementById('vs').textContent=this.value+'%'">
+        <div class="sl-val" id="vs">85%</div>
+      </div>
+      <div class="f-row"><div class="f-lbl">난이도</div>
+        <select class="hsel" id="s-df">
+          <option value="easy">초급 — 자동 안정화 ON</option>
+          <option value="normal">중급 — 기본 어시스트</option>
+          <option value="hard">고급 — 실전 물리</option>
+          <option value="expert">전문가 — 완전 수동</option>
+        </select>
+      </div>
+      <div class="f-row"><div class="f-lbl">시간대</div>
+        <select class="hsel" id="s-td">
+          <option value="day">주간 09:00</option><option value="dawn">새벽 05:30</option>
+          <option value="dusk">황혼 18:30</option><option value="night">야간 22:00</option>
+        </select>
+      </div>
+    </div>
+
+  </div>
+  <div class="s-ftr">
+    <button class="a-btn bk" onclick="toMenu()">← 메인 메뉴</button>
+    <button class="a-btn go" onclick="startGame()">▶ 비행 개시</button>
+  </div>
+</div>
+
+<!-- ══════════════ LOADING ══════════════ -->
+<div id="sl" class="scr">
+  <div class="ld-t">INITIALIZING DRSIM-K</div>
+  <div class="ld-b"><div class="ld-f" id="ldf"></div></div>
+  <div class="ld-s" id="lds">시스템 초기화 중...</div>
+</div>
+
+<!-- ══════════════ GAME ══════════════ -->
+<div id="sg" class="scr">
+  <canvas id="cv"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="h-top">
+      <div class="hp" style="display:flex;align-items:center;gap:.45rem">
+        <span id="h-ico" style="font-size:1.3rem;filter:drop-shadow(0 0 5px rgba(0,255,136,.7))">🚁</span>
+        <div><div class="vl" id="h-nm" style="font-size:.68rem">드론명</div>
+          <div style="font-size:.47rem;color:var(--gx)" id="h-tp">종류</div></div>
+      </div>
+      <div class="hp">
+        <div class="lb">배터리</div>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <div style="width:48px;height:9px;border:1px solid var(--bdr);overflow:hidden">
+            <div id="bat-f" style="height:100%;width:100%;background:var(--g);transition:width .3s"></div></div>
+          <div class="vl" id="bat-p">100%</div>
+        </div>
+      </div>
+      <div class="hp"><div class="lb">비행시간</div><div class="vl" id="h-time">00:00:00</div></div>
+      <div class="hp"><div class="lb">고도</div><div class="vl" id="h-alt">0m</div></div>
+      <div class="sp"></div>
+      <div class="hp"><div class="lb">모드</div><div class="vl" id="h-mod">자유비행</div></div>
+      <div class="hp"><div class="lb">카메라</div><div class="vl" id="h-cam">3인칭</div></div>
+      <div class="hp"><div class="lb">게임패드</div><div class="vl" id="h-gp" style="font-size:.6rem">미연결</div></div>
+    </div>
+
+    <div class="h-cmp">
+      <div class="c-bar"><div id="c-tks"></div><div class="c-mid"></div></div>
+      <div class="c-val" id="c-val">000°</div>
+    </div>
+    <div class="h-cbg" id="h-cbg">[ 3인칭 추적 카메라 — V키로 전환 ]</div>
+
+    <div class="h-wx">
+      <div class="wx-r"><span>날씨</span><span id="wx-w">맑음</span></div>
+      <div class="wx-r"><span>풍향/속</span><span id="wx-s">N/2m/s</span></div>
+      <div class="wx-r"><span>난기류</span><span id="wx-t">없음</span></div>
+    </div>
+
+    <div class="h-mis">
+      <div class="m-t">◈ 현재 임무</div>
+      <div class="m-n" id="m-n">자유 비행 연습</div>
+      <div id="m-objs"></div>
+    </div>
+
+    <div class="h-tape h-tl"><div class="t-mid"></div><div class="t-val" id="t-spd">0</div><div class="t-lbl">km/h</div></div>
+    <div class="h-tape h-tr"><div class="t-mid"></div><div class="t-val" id="t-alt">0</div><div class="t-lbl">m</div></div>
+
+    <div class="h-side h-sl">
+      <div class="ir"><span class="il">수직속도</span><span class="iv" id="i-vs">0.0m/s</span></div>
+      <div class="ir"><span class="il">피치</span><span class="iv" id="i-pt">0°</span></div>
+      <div class="ir"><span class="il">롤</span><span class="iv" id="i-rl">0°</span></div>
+      <div class="ir"><span class="il">요</span><span class="iv" id="i-yw">0°</span></div>
+    </div>
+    <div class="h-side h-sr">
+      <div class="ir"><span class="il">귀환거리</span><span class="iv" id="i-ds">0m</span></div>
+      <div class="ir"><span class="il">스로틀</span><span class="iv" id="i-th">0%</span></div>
+      <div class="ir"><span class="il">링크품질</span><span class="iv" id="i-lk">정상</span></div>
+      <div class="ir"><span class="il">GPS</span><span class="iv">고정</span></div>
+    </div>
+
+    <div class="h-att">
+      <div class="a-ring">
+        <div class="a-sky"></div>
+        <div class="a-gnd" id="a-gnd"></div>
+        <div class="a-hz" id="a-hz"></div>
+        <div class="a-ln"></div><div class="a-dt"></div>
+      </div>
+    </div>
+
+    <div class="h-thr">
+      <div class="th-l">THRT</div>
+      <div class="th-b"><div class="th-f" id="th-f" style="height:0%"></div></div>
+      <div class="th-v" id="th-v">0%</div>
+    </div>
+
+    <div class="h-mm"><canvas id="mm" width="116" height="116"></canvas></div>
+
+    <div class="h-xh">
+      <div class="br tl"></div><div class="br tr"></div><div class="br bl"></div><div class="br br2"></div>
+      <div class="xh-c"></div>
+    </div>
+
+    <!-- 타격/방어 Lock-on 박스 -->
+    <div id="lock-box">
+      <div id="lock-status">SEARCH</div>
+      <div id="lock-dist">---m</div>
+    </div>
+
+    <!-- 정찰 내비게이션 화살표 -->
+    <div id="nav-wrap">
+      <div id="nav-circle">
+        <svg id="nav-tri" width="20" height="24" viewBox="0 0 20 24" style="transform-origin:10px 10px">
+          <polygon points="10,0 18,20 10,15 2,20" fill="rgba(0,255,136,.85)" stroke="none"/>
+        </svg>
+      </div>
+      <div id="nav-dist">---m</div>
+      <div id="nav-status">목표 탐색 중</div>
+    </div>
+
+    <div class="h-wrn" id="h-wrn">⚠ 저고도 위험 ⚠</div>
+    <div id="h-ammo"></div>
+    <div id="h-def"></div>
+    <div id="def-guide"></div>
+    <div id="scan-wrap"><div id="scan-label">스캔 중...</div><div id="scan-bg"><div id="scan-fill"></div></div></div>
+    <div class="h-hnt" id="h-hnt">W/S 전진후진 | A/D 좌우 | Q/E 회전 | Space 상승 | X 하강 | V 카메라전환 | ESC 일시정지</div>
+  </div>
+
+  <!-- FPV overlay -->
+  <div class="fpv-ov" id="fpv-ov">
+    <div class="fpv-vg"></div>
+    <div class="fpv-hz"></div>
+    <div class="fpv-vl"></div>
+    <div class="fpv-rc">● REC&emsp;FPV CAM</div>
+  </div>
+
+  <!-- ESC modal -->
+  <div class="esc-mod" id="esc-mod">
+    <div class="e-box">
+      <div class="e-ttl">⚠ 훈련 일시정지</div>
+      <div class="e-sub">훈련을 종료하시겠습니까?</div>
+      <div class="e-row">
+        <button class="e-yes" onclick="exitGame()">예 — 종료</button>
+        <button class="e-no" onclick="closeEsc()">아니오 — 계속</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- mission complete -->
+  <div class="m-end" id="m-end">
+    <div class="me-t" id="me-t" style="color:var(--g)">임무 완료</div>
+    <div class="me-s" id="me-s">점수: 0점</div>
+    <div style="display:flex;gap:.8rem">
+      <button class="a-btn go" onclick="toSet()">재도전</button>
+      <button class="a-btn bk" onclick="toMenu()">메인 메뉴</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MANUAL ══════════════ -->
+<div class="man" id="man">
+  <div class="man-b">
+    <div class="man-hdr">
+      <div class="man-ttl">📋 DRSIM-K 조종 매뉴얼 v4.0</div>
+      <button class="man-cl" onclick="closeMan()">✕ 닫기</button>
+    </div>
+    <div class="tabs">
+      <button class="tab on" onclick="sTab(this,'t0')">기본 조종법</button>
+      <button class="tab" onclick="sTab(this,'t1')">키보드</button>
+      <button class="tab" onclick="sTab(this,'t2')">게임패드</button>
+      <button class="tab" onclick="sTab(this,'t3')">카메라 시점</button>
+      <button class="tab" onclick="sTab(this,'t4')">미션 수행</button>
+      <button class="tab" onclick="sTab(this,'t5')">HUD 가이드</button>
+      <button class="tab" onclick="sTab(this,'t6')">드론 목록</button>
+      <button class="tab" onclick="sTab(this,'t7')">구현 기능</button>
+    </div>
+
+    <!-- ── T0: 기본 조종법 ── -->
+    <div class="tc on" id="t0">
+      <h2>시작 방법</h2>
+      <p>① 메인 메뉴 → <b>훈련 시작</b><br>
+         ② 드론 기종 · 지형 · 카메라 시점 · 날씨 · 난이도 선택<br>
+         ③ <b>비행 개시</b> → 로딩 완료 후 <b>작전 브리핑</b> 팝업 확인<br>
+         ④ <b>▶ 작전 개시</b> 버튼 클릭 → 비행 시작</p>
+      <div class="tip">💡 미션 모드는 시작 시 목표·조작법·경고가 담긴 <b>작전 브리핑</b>이 자동으로 표시됩니다.</div>
+
+      <h2>드론 조종 4축</h2>
+      <table>
+        <tr><th>축</th><th>키</th><th>동작</th></tr>
+        <tr><td><b>스로틀</b></td><td><span class="kk">Space</span> / <span class="kk">X</span></td><td>엔진 출력 증가/감소 — 이륙에는 30% 이상 필요</td></tr>
+        <tr><td><b>피치</b></td><td><span class="kk">W</span> / <span class="kk">S</span></td><td>앞뒤로 기울어 전진·후진</td></tr>
+        <tr><td><b>롤</b></td><td><span class="kk">A</span> / <span class="kk">D</span></td><td>좌우로 기울어 수평 이동</td></tr>
+        <tr><td><b>요</b></td><td><span class="kk">Q</span> / <span class="kk">E</span></td><td>기체 머리 방향 좌우 회전</td></tr>
+      </table>
+
+      <h2>단계별 첫 비행</h2>
+      <p><b>1. 이륙:</b> <span class="kk">Space</span> 1~2초 → 스로틀 50%↑ → 고도 20m 확보</p>
+      <p><b>2. 호버링:</b> 초급 모드에서 키를 떼면 자동 안정화</p>
+      <p><b>3. 이동:</b> W/S 전후진, A/D 좌우. 짧게 눌렀다 떼는 연습 권장</p>
+      <p><b>4. 회전:</b> Q/E로 기수 방향 전환 → W키로 그 방향으로 전진</p>
+      <p><b>5. 착륙:</b> <span class="kk">X</span>키로 서서히 하강 — 고도 5m 이하 시 HUD 경고</p>
+      <div class="tip">💡 <b>3인칭 모드:</b> 마우스 좌클릭 드래그로 카메라 자유 조작 — 손 떼면 드론 뒤로 자동 복귀</div>
+      <div class="tip">💡 <b>FPV 모드:</b> <span class="kk">V</span>키로 언제든지 3인칭 ↔ FPV 전환 가능</div>
+    </div>
+
+    <!-- ── T1: 키보드 ── -->
+    <div class="tc" id="t1">
+      <h2>키보드 전체 배치</h2>
+      <table>
+        <tr><th>키</th><th>동작</th><th>설명</th></tr>
+        <tr><td><span class="kk">W</span></td><td>전진</td><td>앞으로 기울어 전진 (피치 다운)</td></tr>
+        <tr><td><span class="kk">S</span></td><td>후진</td><td>뒤로 기울어 후진 (피치 업)</td></tr>
+        <tr><td><span class="kk">A</span></td><td>좌측 이동</td><td>왼쪽으로 기울어 수평 이동 (롤 좌)</td></tr>
+        <tr><td><span class="kk">D</span></td><td>우측 이동</td><td>오른쪽으로 기울어 수평 이동 (롤 우)</td></tr>
+        <tr><td><span class="kk">Q</span></td><td>좌회전</td><td>기체 머리 왼쪽 회전 (요 좌)</td></tr>
+        <tr><td><span class="kk">E</span></td><td>우회전</td><td>기체 머리 오른쪽 회전 (요 우)</td></tr>
+        <tr><td><span class="kk">Space</span></td><td>상승</td><td>스로틀 증가, 고도 상승</td></tr>
+        <tr><td><span class="kk">X</span></td><td>하강</td><td>스로틀 감소, 고도 하강</td></tr>
+        <tr><td><span class="kk">Shift</span></td><td>빠른 상승</td><td>긴급 스로틀 증가</td></tr>
+        <tr><td><span class="kk">Ctrl</span></td><td>빠른 하강</td><td>긴급 스로틀 감소</td></tr>
+        <tr><td><span class="kk">↑↓←→</span></td><td>카메라 회전</td><td>3인칭 모드 카메라 방향 조작</td></tr>
+        <tr><td><span class="kk">V</span></td><td>시점 전환</td><td>3인칭 추적 ↔ 1인칭 FPV 전환</td></tr>
+        <tr><td><span class="kk">F</span></td><td>무기 발사</td><td>타격·방어 미션 — 미사일/요격탄 발사</td></tr>
+        <tr><td><span class="kk">ESC</span></td><td>일시정지</td><td>훈련 일시정지 / 종료 메뉴</td></tr>
+      </table>
+      <div class="tip">🆕 <b>F키</b>가 추가되었습니다 — Lock-on 상태에서 발사하면 목표까지 자동 유도됩니다.</div>
+    </div>
+
+    <!-- ── T2: 게임패드 ── -->
+    <div class="tc" id="t2">
+      <h2>연결 방법</h2>
+      <p><b>PS4/PS5:</b> USB 또는 블루투스(PS버튼+SHARE 3초). 연결 후 아무 버튼이나 눌러야 브라우저에서 인식.</p>
+      <p><b>Xbox:</b> USB 또는 Xbox 무선 어댑터. Windows 10/11 자동 드라이버 설치.</p>
+      <div class="tip">⚠ 로컬 파일(file://) 실행 시 게임패드 인식이 차단될 수 있습니다. Chrome으로 실행 권장.</div>
+      <h2>PS / Xbox 컨트롤러 배치</h2>
+      <table>
+        <tr><th>입력</th><th>동작</th><th>비고</th></tr>
+        <tr><td>왼쪽 스틱 ↑↓</td><td>전진 / 후진</td><td>피치 조작</td></tr>
+        <tr><td>왼쪽 스틱 ←→</td><td>좌우 수평이동</td><td>롤 조작</td></tr>
+        <tr><td>오른쪽 스틱 ←→</td><td>기체 회전 (요)</td><td>기수 방향 전환</td></tr>
+        <tr><td>오른쪽 스틱 ↑↓</td><td>카메라 상하</td><td>3인칭 모드만</td></tr>
+        <tr><td>R2 / RT</td><td>상승 (스로틀 ↑)</td><td>아날로그 감도 적용</td></tr>
+        <tr><td>L2 / LT</td><td>하강 (스로틀 ↓)</td><td>아날로그 감도 적용</td></tr>
+        <tr><td>△ / Y</td><td>카메라 시점 전환</td><td>3인칭 ↔ FPV</td></tr>
+        <tr><td>OPTIONS / Menu</td><td>일시정지</td><td>—</td></tr>
+      </table>
+      <div class="tip">💡 HUD 우측 상단에 <b>게임패드 연결 상태</b>가 표시됩니다. 연결 후 아무 버튼이나 눌러 활성화하세요.</div>
+    </div>
+
+    <!-- ── T3: 카메라 시점 ── -->
+    <div class="tc" id="t3">
+      <h2>3인칭 추적 카메라</h2>
+      <p>드론 뒤에서 따라가는 시점입니다. 드론의 위치·자세·주변 지형을 한눈에 파악할 수 있어 초보자에게 적합합니다.</p>
+      <p>마우스 좌클릭을 누른 채 드래그하면 카메라를 자유롭게 조작할 수 있습니다. 버튼을 떼면 카메라가 드론 뒤쪽으로 부드럽게 자동 복귀합니다.</p>
+      <p>방향키 <span class="kk">↑↓←→</span>으로도 카메라 각도를 조절할 수 있습니다.</p>
+      <div class="tip">💡 초보자는 3인칭 카메라로 시작해 주변 지형과 드론 상태를 익히는 것을 권장합니다.</div>
+
+      <h2>1인칭 FPV (First Person View)</h2>
+      <p>드론에 탑재된 전방 카메라 시점으로, 실제 드론 조종사가 FPV 고글을 통해 보는 것과 동일한 경험을 제공합니다.</p>
+      <p>드론이 롤(좌우 기울기)할 때 화면도 함께 기울어져 현실감을 줍니다.</p>
+      <p>FPV 모드에서는 화면 상단에 <b>● REC FPV CAM</b> 표시와 비네트 효과가 적용됩니다.</p>
+      <div class="tip">💡 <span class="kk">V</span>키로 비행 중 언제든지 시점 전환이 가능합니다. 타격 미션은 FPV 모드에서 Lock-on이 더 직관적입니다.</div>
+
+      <h2>카메라 전환 시 HUD 변화</h2>
+      <table>
+        <tr><th>항목</th><th>3인칭</th><th>FPV</th></tr>
+        <tr><td>상단 카메라 표시</td><td>3인칭</td><td>1인칭 FPV</td></tr>
+        <tr><td>방향키 기능</td><td>카메라 회전</td><td>비활성</td></tr>
+        <tr><td>드론 외관</td><td>보임</td><td>숨겨짐</td></tr>
+        <tr><td>화면 롤</td><td>고정</td><td>드론 롤과 함께 기울어짐</td></tr>
+      </table>
+    </div>
+
+    <!-- ── T4: 미션 수행 ── -->
+    <div class="tc" id="t4">
+      <h2>미션 공통 — 작전 브리핑</h2>
+      <p>미션 모드로 비행 시작 시 <b>작전 브리핑 팝업</b>이 자동으로 표시됩니다. 팝업에는 미션명·목표·제한시간·조작 가이드가 포함됩니다.</p>
+      <p><b>▶ 작전 개시</b> 버튼을 눌러야 비행이 시작됩니다. 브리핑을 꼭 읽고 시작하세요.</p>
+      <div class="tip">💡 화면 상단 중앙에 <b>⏱ 남은 시간</b>이 항상 표시됩니다. 60초 이하 시 빨간색으로 변합니다.</div>
+
+      <h2>🔵 정찰 미션 수행법</h2>
+      <p>정찰 드론으로 적 진지·오염 구역 등을 탐색하고 영상 데이터를 수집하는 임무입니다.</p>
+      <table>
+        <tr><th>단계</th><th>내용</th></tr>
+        <tr><td>① 방향 확인</td><td>화면 하단 <b>방향 화살표 HUD</b>로 목표 방향·거리 확인</td></tr>
+        <tr><td>② 접근</td><td>목표 지점 <b>100m 이내</b> 접근 + <b>고도 80m 이하</b> 유지</td></tr>
+        <tr><td>③ 스캔</td><td>조건 충족 시 화면 하단에 <b>스캔 진행바</b> 표시 — 3초 유지</td></tr>
+        <tr><td>④ 완료</td><td>스캔 완료 → 자동으로 다음 목표로 화살표 업데이트</td></tr>
+        <tr><td>⑤ 귀환</td><td>마지막 목표는 <b>출발 지점(기지) 복귀</b> — 기지 36m 이내 접근</td></tr>
+      </table>
+      <div class="tip">💡 방향 화살표가 <b>✅ 스캔 중...</b>으로 바뀌면 그 위치에서 3초 유지하세요.</div>
+
+      <h2>🔴 타격 미션 수행법</h2>
+      <p>미사일로 적 차량·거점을 정밀 타격하는 임무입니다. MQ-9 리퍼(AGM-114 헬파이어 4발) 등 공격 드론 전용입니다.</p>
+      <table>
+        <tr><th>단계</th><th>내용</th></tr>
+        <tr><td>① 방향 확인</td><td>화면 하단 <b>빨간 화살표 HUD</b>로 목표 방향·거리 확인</td></tr>
+        <tr><td>② 접근</td><td>목표 <b>800m 이내</b> 접근 → Lock-on 가능 범위 진입</td></tr>
+        <tr><td>③ Lock-on</td><td>화면 중앙 근처에 목표가 들어오면 <b>🔴 LOCK</b> 표시 자동 활성</td></tr>
+        <tr><td>④ 발사</td><td><span class="kk">F</span>키 발사 → 미사일이 목표까지 <b>자동 유도</b></td></tr>
+        <tr><td>⑤ 확인</td><td>미사일 명중 시 폭발 효과 + 목표 소멸 확인</td></tr>
+      </table>
+      <div class="tip">💡 화면 하단 <b>공격 가이드 바</b>에 현재 Lock-on 상태·목표 거리·잔여 미사일이 실시간 표시됩니다.</div>
+      <div class="tip">⚠ Lock-on 없이도 발사 가능하지만 비유도(직진) 발사입니다. 명중률이 크게 낮아집니다.</div>
+      <div class="tip">⚠ 미사일은 제한된 수량입니다. 모든 목표를 파괴할 수 있도록 신중하게 사용하세요.</div>
+
+      <h2>🟢 방어 미션 수행법</h2>
+      <p>기지로 접근하는 적 드론을 격추·포획하는 임무입니다. 드론 종류에 따라 방어 방식이 다릅니다.</p>
+      <table>
+        <tr><th>드론</th><th>방어 방식</th><th>방법</th></tr>
+        <tr><td>🛡 NET-1 그물포획</td><td>근접 자동 포획</td><td>적 드론 <b>22m 이내</b> 접근 → 자동 그물 발사·포획</td></tr>
+        <tr><td>⚡ INT-K 요격드론</td><td>유도 미사일</td><td>적 드론 <b>1200m 이내</b> → 🔴 LOCK → <span class="kk">F</span>키 발사</td></tr>
+      </table>
+      <p>미니맵의 <b>적색 점</b>으로 접근 방향 실시간 파악 → 진로 차단이 핵심 전략입니다.</p>
+      <div class="tip">⚠ 적 드론 3기가 기지에 도달하면 <b>미션 실패</b>. 10기 격추/포획 시 <b>미션 성공</b>.</div>
+      <div class="tip">💡 적은 7초마다 랜덤 방향에서 스폰됩니다. 미니맵을 주시하며 선제 요격하세요.</div>
+    </div>
+
+    <!-- ── T5: HUD 가이드 ── -->
+    <div class="tc" id="t5">
+      <h2>HUD 전체 구성</h2>
+      <table>
+        <tr><th>위치</th><th>요소</th><th>표시 내용</th></tr>
+        <tr><td>좌상단</td><td>드론 정보</td><td>기체명·종류·배터리·비행시간</td></tr>
+        <tr><td>좌상단 아래</td><td>기상 패널</td><td>날씨·풍향/풍속·난기류</td></tr>
+        <tr><td>우상단</td><td>상태 표시</td><td>비행 모드·카메라 시점·게임패드 연결</td></tr>
+        <tr><td>우상단 아래</td><td>미션 패널</td><td>현재 임무명·목표 달성 현황</td></tr>
+        <tr><td>상단 중앙</td><td>나침반</td><td>기수 방향 (N/E/S/W) + 현재 방위각</td></tr>
+        <tr><td>중앙 상단</td><td>⏱ 미션 타이머</td><td>남은 시간 (미션 모드만) — 60초 이하 빨간색</td></tr>
+        <tr><td>좌측 중앙</td><td>속도 테이프</td><td>현재 비행 속도 (km/h)</td></tr>
+        <tr><td>우측 중앙</td><td>고도 테이프</td><td>현재 고도 (m)</td></tr>
+        <tr><td>좌하단</td><td>자세 지시계</td><td>피치·롤 실시간 시각화</td></tr>
+        <tr><td>자세계 옆</td><td>스로틀 바</td><td>현재 엔진 출력 (%)</td></tr>
+        <tr><td>우하단</td><td>미니맵</td><td>드론·목표·적 위치 + 현재 고도</td></tr>
+        <tr><td>좌하단 패널</td><td>비행 데이터</td><td>수직속도·피치·롤·요</td></tr>
+        <tr><td>우하단 패널</td><td>항법 데이터</td><td>귀환거리·스로틀·링크품질·GPS</td></tr>
+        <tr><td>화면 중앙</td><td>크로스헤어</td><td>조준점 (항상 화면 정중앙 고정)</td></tr>
+        <tr><td>가변 위치</td><td>🔴 Lock-on 박스</td><td>가장 가까운 목표 추적 (타격·방어 미션)</td></tr>
+        <tr><td>하단 중앙</td><td>방향 화살표</td><td>목표 방향·거리 (정찰·타격 미션)</td></tr>
+        <tr><td>하단 중앙</td><td>공격 가이드 바</td><td>Lock-on 상태·목표 거리·잔여 미사일 (타격 미션)</td></tr>
+        <tr><td>우상단</td><td>🚀 탄약 HUD</td><td>잔여 미사일 수 (타격·방어 미션)</td></tr>
+        <tr><td>하단 중앙 (바)</td><td>스캔 진행바</td><td>정찰 스캔 진행 상태 (%)</td></tr>
+      </table>
+
+      <h2>경고 표시</h2>
+      <table>
+        <tr><th>경고</th><th>조건</th><th>대응</th></tr>
+        <tr><td style="color:#ff3333">⚠ 저고도 위험</td><td>고도 5m 이하</td><td>Space키로 즉시 상승</td></tr>
+        <tr><td style="color:#ffaa00">⚠ 배터리 부족</td><td>배터리 20% 이하</td><td>즉시 귀환 (기지 방향 복귀)</td></tr>
+        <tr><td style="color:#ff3333">⚠ 배터리 방전</td><td>배터리 0%</td><td>드론 추락 — 미션 실패</td></tr>
+        <tr><td style="color:#ffaa00">⚠ 적 드론 접근</td><td>방어 미션: 적 200m 이내</td><td>요격 또는 차단 기동</td></tr>
+        <tr><td style="color:#ff3333">⚠ 탄약 소진</td><td>미사일 0발 잔여</td><td>추가 발사 불가 — 임무 완수 불가시 귀환</td></tr>
+      </table>
+
+      <h2>미니맵 범례</h2>
+      <table>
+        <tr><th>표시</th><th>의미</th></tr>
+        <tr><td>▲ 청록색 삼각형</td><td>내 드론 (방향 표시)</td></tr>
+        <tr><td>🟩 녹색 사각형</td><td>기지 (귀환 지점)</td></tr>
+        <tr><td>🟨 주황 사각형</td><td>타격 목표</td></tr>
+        <tr><td>🔴 적색 원</td><td>적 드론 (방어 미션)</td></tr>
+      </table>
+    </div>
+
+    <!-- ── T6: 드론 목록 ── -->
+    <div class="tc" id="t6">
+      <h2>정찰 드론 (5종)</h2><div class="d-ig" id="di-r"></div>
+      <h2>공격 드론 (5종)</h2><div class="d-ig" id="di-a"></div>
+      <h2>지원/보급 드론 (3종)</h2><div class="d-ig" id="di-s"></div>
+      <h2>방어 드론 (2종)</h2><div class="d-ig" id="di-d"></div>
+      <h2>소형 정찰 드론 (5종)</h2><div class="d-ig" id="di-m"></div>
+      <h2>드론 유형별 조종 특성</h2>
+      <table>
+        <tr><th>유형</th><th>외형 특성</th><th>조종 특성</th><th>미션 적합</th></tr>
+        <tr><td>쿼드콥터</td><td>4프로펠러, 중형</td><td>호버링 안정, 반응 빠름</td><td>정찰, 타격, 방어</td></tr>
+        <tr><td>헥사콥터</td><td>6프로펠러, 대형</td><td>안정적, 고페이로드</td><td>지원·보급</td></tr>
+        <tr><td>고정익 (MQ-9형)</td><td>장익, V미익, 후방프롭</td><td>고속·장거리, AGM-114 ×4</td><td>타격 미션 최적</td></tr>
+        <tr><td>고정익 (배회형)</td><td>후퇴익, 소형</td><td>장시간 체공, 후방 프롭</td><td>정찰·배회</td></tr>
+        <tr><td>델타익</td><td>삼각 날개, 노즐</td><td>고속, 요격 전용</td><td>방어 INT-K</td></tr>
+        <tr><td>소형/나노</td><td>초소형, 4프롭</td><td>배터리 짧음, 바람 영향 큼</td><td>단거리 정찰</td></tr>
+      </table>
+    </div>
+
+    <!-- ── T7: 구현 기능 전체 목록 ── -->
+    <div class="tc" id="t7">
+      <h2>DRSIM-K v4.0 구현 기능 전체 목록</h2>
+      <p>본 시뮬레이터에 구현된 모든 기능의 상세 설명입니다.</p>
+
+      <h2>① 20종 군용 드론 3D 모델</h2>
+      <div class="d-ig" style="margin-bottom:.5rem">
+        <div class="dic"><div class="ii">✈ 🛩 🛸</div><div class="in">고정익 계열</div><div class="id">MQ-9 리퍼형 (AGM-114 헬파이어 ×4, SAR 안테나, SATCOM 돔, EO/IR 터렛, V형 미익, 3엽 후방 프롭) · 배회탄형 (후퇴익, 후방 프롭) · 정찰 고정익 5종</div></div>
+        <div class="dic"><div class="ii">🚁 🔬</div><div class="in">멀티콥터 계열</div><div class="id">쿼드콥터 (정찰/공격/방어), 헥사콥터 (지원), 소형/나노 (초소형) — 각 유형별 전용 3D 모델</div></div>
+        <div class="dic"><div class="ii">⚡</div><div class="in">델타익 요격기 (INT-K)</div><div class="id">스텔스 델타익, AESA 레이더, 후방 로켓 노즐 — 고속 요격 전용 형태</div></div>
+      </div>
+      <div class="tip">💡 프로펠러는 비행 중 실시간으로 회전하며, 스로틀에 따라 회전 속도가 변합니다.</div>
+
+      <h2>② 절차적 지형 생성 (5종)</h2>
+      <table>
+        <tr><th>지형</th><th>특징</th><th>오브젝트</th></tr>
+        <tr><td>평야 (GOP)</td><td>완만한 구릉, 녹색 초원</td><td>나무 80그루</td></tr>
+        <tr><td>산악 (강원도)</td><td>능선·암벽·설산 정상</td><td>나무 120그루 + 바위 60개</td></tr>
+        <tr><td>해상 (동해)</td><td>절벽·해안선·수면</td><td>해안 나무 40그루</td></tr>
+        <tr><td>도심 (시가전)</td><td>격자형 도로, 건물 35동</td><td>야간/황혼 창문 조명 효과</td></tr>
+        <tr><td>군 훈련장</td><td>참호·둔덕 지형</td><td>건물 35동 + 벙커 8개</td></tr>
+      </table>
+
+      <h2>③ 현실 비행 물리 시뮬레이션</h2>
+      <table>
+        <tr><th>요소</th><th>내용</th></tr>
+        <tr><td>바람</td><td>방향·세기 설정 → 비행 중 드리프트 발생</td></tr>
+        <tr><td>난기류</td><td>강도 설정 → 랜덤 진동·흔들림 발생</td></tr>
+        <tr><td>중력</td><td>난이도별 중력 계수 (초급 0.04 ~ 전문가 0.38)</td></tr>
+        <tr><td>자동 안정화</td><td>초급·중급 난이도에서 키를 떼면 자동 수평 복귀</td></tr>
+        <tr><td>배터리 소모</td><td>스로틀 사용 시 빠른 소모, 대기 시 느린 소모</td></tr>
+        <tr><td>항법등</td><td>스트로브·방향등 깜빡임 실시간 시뮬레이션</td></tr>
+      </table>
+
+      <h2>④ 미션 시스템 (8종)</h2>
+      <table>
+        <tr><th>분류</th><th>미션명</th><th>핵심 메커닉</th></tr>
+        <tr><td rowspan="4">🔵 정찰</td><td>적 진지 정찰</td><td>3목표 스캔 + 기지 귀환</td></tr>
+        <tr><td>고립 부대 위치 파악</td><td>통신 두절 구역 진입·스캔</td></tr>
+        <tr><td>NBC 오염 탐지</td><td>2구역 탐지 + 경계 설정</td></tr>
+        <tr><td>야간 감시 작전</td><td>2구역 스캔 + 의심 활동 전송</td></tr>
+        <tr><td rowspan="2">🔴 타격</td><td>침투 드론 격추</td><td>Lock-on + 유도 미사일</td></tr>
+        <tr><td>적 거점 정밀 타격</td><td>목표 접근 + 미사일 타격</td></tr>
+        <tr><td rowspan="2">🟢 방어</td><td>보급 드론 호위</td><td>웨이브 적 드론 요격</td></tr>
+        <tr><td>전자전 방어 작전</td><td>재밍 구역 방어</td></tr>
+      </table>
+
+      <h2>⑤ Lock-on 유도 무기 시스템</h2>
+      <p>타격·방어 미션에서 사용하는 실전 방식의 Fire-and-Forget 유도 미사일입니다.</p>
+      <table>
+        <tr><th>단계</th><th>내용</th></tr>
+        <tr><td>탐색 (SEARCH)</td><td>화면에 흰색 박스 — 목표 시야 내 탐색 중</td></tr>
+        <tr><td>추적 (TRACK)</td><td>노란색 박스 — 목표 범위 근접, 준비 상태</td></tr>
+        <tr><td>잠금 (LOCK)</td><td>빨간색 박스 — 사거리 이내, F키 발사 가능</td></tr>
+        <tr><td>유도 비행</td><td>발사 후 미사일이 목표 좌표까지 자동 조향</td></tr>
+        <tr><td>명중/폭발</td><td>명중 시 폭발 이펙트 + 조명 플래시 효과</td></tr>
+      </table>
+      <div class="tip">💡 잠금 범위: 타격 목표 800m / INT-K 요격기 1200m / NET-1 그물 22m</div>
+
+      <h2>⑥ HUD 시스템</h2>
+      <p>나침반·속도 테이프·고도 테이프·자세 지시계·스로틀 바·미니맵·기상 패널·미션 패널·방향 화살표·Lock-on 박스·공격 가이드 바·스캔 진행바·미션 타이머·경고 시스템 등 전술 드론 조종사 실제 HUD를 기반으로 구현되었습니다.</p>
+
+      <h2>⑦ 카메라 시스템</h2>
+      <p><b>3인칭 추적:</b> 드론 뒤 추적, 마우스 드래그 자유 조작, 자동 복귀 / <b>FPV:</b> 드론 전방 카메라, 롤 기울어짐 효과 — V키로 언제든 전환</p>
+
+      <h2>⑧ 키보드 + 게임패드 동시 지원</h2>
+      <p>PS4/PS5/Xbox 컨트롤러를 키보드와 동시에 사용할 수 있습니다. 아날로그 스틱 입력은 감도 설정에 따라 조절됩니다.</p>
+
+      <div class="tip">🛠 DRSIM-K v4.0 — Three.js r128 기반 · 대한민국 군용 드론 훈련 시뮬레이터</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

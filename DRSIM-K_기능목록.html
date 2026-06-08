@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRSIM-K v4.0 — 구현 기능 전체 목록</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Orbitron:wght@700&display=swap');
+:root{--g:#00ff88;--r:#ff3333;--w:#ffaa00;--b:#4499ff;--bg:#010903;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:#b8d8b8;font-family:'Noto Sans KR',sans-serif;font-size:.9rem;line-height:1.72;padding:2rem 1rem;}
+.wrap{max-width:900px;margin:0 auto;}
+h1{font-family:'Orbitron',monospace;font-size:1.65rem;color:var(--g);letter-spacing:.22em;border-bottom:2px solid rgba(0,255,136,.3);padding-bottom:.8rem;margin-bottom:.4rem;}
+.ver{font-size:.62rem;color:rgba(0,255,136,.35);letter-spacing:.18em;margin-bottom:2.2rem;font-family:'Orbitron',monospace;}
+h2{font-family:'Orbitron',monospace;font-size:.88rem;color:var(--g);border-left:3px solid var(--g);padding:.06rem 0 .06rem .7rem;margin:1.8rem 0 .7rem;letter-spacing:.1em;}
+h3{font-size:.82rem;font-weight:700;color:#88ddaa;margin:1.1rem 0 .4rem;padding-left:.6rem;border-left:2px solid rgba(0,255,136,.22);}
+ul{padding-left:1.4rem;margin-bottom:.6rem;}
+li{margin-bottom:.32rem;color:#99cc99;}
+li b{color:var(--g);}
+li .tag{display:inline-block;font-size:.6rem;padding:.02rem .38rem;border-radius:2px;font-family:'Orbitron',monospace;margin-right:.3rem;border:1px solid;vertical-align:middle;}
+li .tag.new{color:var(--g);border-color:rgba(0,255,136,.45);background:rgba(0,255,136,.08);}
+li .tag.fix{color:var(--w);border-color:rgba(255,170,0,.45);background:rgba(255,170,0,.08);}
+li .tag.atk{color:var(--r);border-color:rgba(255,50,50,.45);background:rgba(255,50,50,.08);}
+li .tag.def{color:var(--b);border-color:rgba(68,153,255,.45);background:rgba(68,153,255,.08);}
+.section{background:rgba(0,255,136,.03);border:1px solid rgba(0,255,136,.1);padding:1.1rem 1.4rem;margin-bottom:1.2rem;}
+table{width:100%;border-collapse:collapse;margin:.7rem 0;}
+th{background:rgba(0,255,136,.09);border:1px solid rgba(0,255,136,.15);padding:.4rem .7rem;color:var(--g);font-family:'Orbitron',monospace;font-size:.66rem;text-align:left;}
+td{border:1px solid rgba(0,255,136,.1);padding:.38rem .7rem;font-size:.78rem;}
+td:first-child{color:var(--g);font-weight:700;white-space:nowrap;}
+.kk{display:inline-block;background:rgba(0,0,0,.55);border:1px solid rgba(0,255,136,.36);border-bottom:2px solid rgba(0,255,136,.36);padding:.01rem .36rem;font-family:'Orbitron',monospace;font-size:.65rem;color:var(--g);border-radius:2px;}
+.note{background:rgba(0,88,44,.14);border:1px solid rgba(0,200,90,.2);padding:.55rem .9rem;color:#88ddaa;font-size:.77rem;margin:.6rem 0;}
+.note.warn{background:rgba(255,170,0,.07);border-color:rgba(255,170,0,.2);color:#ddcc88;}
+footer{margin-top:3rem;padding-top:1rem;border-top:1px solid rgba(0,255,136,.12);font-family:'Orbitron',monospace;font-size:.56rem;color:rgba(0,255,136,.22);text-align:center;letter-spacing:.15em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>DRSIM-K</h1>
+<div class="ver">v4.0 — 대한민국 군 드론 조종 훈련 시뮬레이터 · 구현 기능 전체 목록</div>
+
+<!-- ═══ 1. 드론 목록 ═══ -->
+<h2>① 조종 가능 드론 — 총 20종</h2>
+<div class="section">
+<h3>🔵 정찰 드론 (5종)</h3>
+<table>
+<tr><th>기종</th><th>특징</th><th>최대속도</th><th>최대고도</th><th>항속시간</th></tr>
+<tr><td>RQ-101 송골매</td><td>대한민국 육군 주력 전술 정찰. EO/IR 실시간 전송</td><td>120 km/h</td><td>3,000 m</td><td>180분</td></tr>
+<tr><td>RQ-900 나이트아울</td><td>야간 FLIR 열화상 카메라 탑재, 야간 작전 특화</td><td>90 km/h</td><td>4,000 m</td><td>240분</td></tr>
+<tr><td>RQ-7 Shadow</td><td>미 육군 전술 정찰, 한미 연합훈련 운용</td><td>110 km/h</td><td>4,600 m</td><td>300분</td></tr>
+<tr><td>Hermes 450</td><td>이스라엘제 중고도 장시간 체공 정찰</td><td>176 km/h</td><td>5,500 m</td><td>420분</td></tr>
+<tr><td>SONMI-01 소니미</td><td>보병 분대 전방 정찰용 소형 쿼드콥터</td><td>60 km/h</td><td>300 m</td><td>30분</td></tr>
+</table>
+
+<h3>🔴 공격 드론 (5종)</h3>
+<table>
+<tr><th>기종</th><th>특징</th><th>최대속도</th><th>최대고도</th><th>무장</th></tr>
+<tr><td>MQ-9 리퍼</td><td>미 공군 주력 공격 드론. AGM-114 헬파이어 ×4 탑재</td><td>482 km/h</td><td>15,000 m</td><td>헬파이어 4발</td></tr>
+<tr><td>KH-1 타격드론</td><td>한국형 소형 자폭 드론. 정밀 유도 타격</td><td>200 km/h</td><td>1,000 m</td><td>자폭탄 2발</td></tr>
+<tr><td>Bayraktar TB2</td><td>튀르키예 공격 드론. 현대전 검증</td><td>222 km/h</td><td>8,200 m</td><td>MAM-L 2발</td></tr>
+<tr><td>SWARM-K 군집</td><td>군집비행 소형 공격 편대 드론</td><td>80 km/h</td><td>500 m</td><td>소형탄 2발</td></tr>
+<tr><td>LM-1 배회탄</td><td>목표 상공 배회 후 자폭 타격</td><td>160 km/h</td><td>4,500 m</td><td>자폭 2발</td></tr>
+</table>
+
+<h3>🟢 방어 드론 (2종)</h3>
+<table>
+<tr><th>기종</th><th>방어 방식</th><th>특징</th></tr>
+<tr><td>NET-1 그물포획</td><td>22m 이내 자동 그물 발사·포획</td><td>위상배열 레이더+RF재머 탑재</td></tr>
+<tr><td>INT-K 요격드론</td><td>F키로 유도 미사일 12발 발사</td><td>스텔스 델타익, 1200m Lock-on 범위</td></tr>
+</table>
+
+<h3>🟡 지원 드론 (3종)</h3>
+<table>
+<tr><th>기종</th><th>역할</th></tr>
+<tr><td>LS-1 보급드론</td><td>전방 부대 탄약/의약품 보급 (호위 미션 보호 대상)</td></tr>
+<tr><td>MED-K 의무드론</td><td>부상병 응급키트 투하 및 위치 중계</td></tr>
+<tr><td>COM-1 중계드론</td><td>통신 음영 지역 공중 중계기</td></tr>
+</table>
+
+<h3>⚪ 소형 드론 (5종)</h3>
+<table>
+<tr><th>기종</th><th>특징</th></tr>
+<tr><td>NI-1 나노아이</td><td>손바닥 크기 초소형. 건물 내부 정찰</td></tr>
+<tr><td>Black Hornet 3</td><td>세계 최소 군용 드론 33g. 노르웨이제</td></tr>
+<tr><td>Puma AE</td><td>손으로 던져 발사. 포대급 정찰</td></tr>
+<tr><td>RQ-11 Raven</td><td>미군 표준 소대급 정찰 드론</td></tr>
+<tr><td>SkyRanger R70</td><td>특수부대 소형 다목적. 모듈 교체 가능</td></tr>
+</table>
+</div>
+
+<!-- ═══ 2. 미션 시스템 ═══ -->
+<h2>② 미션 시스템 — 총 8종</h2>
+<div class="section">
+
+<h3>🔵 정찰 미션 (4종)</h3>
+<table>
+<tr><th>미션명</th><th>목표</th><th>제한시간</th><th>기본점수</th></tr>
+<tr><td>적 진지 정찰 임무</td><td>전방 진지 비행 → 적 전력 영상 촬영 → 귀환</td><td>10분</td><td>1000점</td></tr>
+<tr><td>고립 부대 위치 파악</td><td>통신 두절 구역 진입 → 아군 신호탄 확인 → 좌표 전송</td><td>8분</td><td>900점</td></tr>
+<tr><td>NBC 오염 지역 탐지</td><td>오염 구역 A/B 탐지 → 경계 구역 설정</td><td>12분</td><td>950점</td></tr>
+<tr><td>야간 감시 작전</td><td>감시 구역 A/B 스캔 → 의심 활동 전송</td><td>15분</td><td>800점</td></tr>
+</table>
+<div class="note">정찰 수행 방법: 파란 방향 화살표로 목표 위치 탐색 → 목표 100m 이내 + 고도 80m 이하 접근 → 3초 유지 시 자동 스캔 완료</div>
+
+<h3>🔴 타격 미션 (2종)</h3>
+<table>
+<tr><th>미션명</th><th>목표</th><th>제한시간</th><th>기본점수</th></tr>
+<tr><td>침투 드론 격추</td><td>미확인 비행체 추적 → 시각 식별 → 재밍 무력화</td><td>7분</td><td>1200점</td></tr>
+<tr><td>적 거점 정밀 타격</td><td>목표 좌표 비행 → 타격 지점 확인 → 전과 영상 전송</td><td>8분</td><td>1300점</td></tr>
+</table>
+<div class="note">타격 수행 방법: 방향 화살표로 목표 탐색 → 800m 이내 접근 → 🔴 LOCK-ON 표시 → <b>F키</b> 발사 → 유도 미사일 자동 추적</div>
+
+<h3>🟢 방어 미션 (2종)</h3>
+<table>
+<tr><th>미션명</th><th>목표</th><th>제한시간</th><th>기본점수</th></tr>
+<tr><td>보급 드론 호위</td><td>보급드론 합류(32m 이내) → 적 감시 구역 우회 → 기지 귀환</td><td>9분</td><td>850점</td></tr>
+<tr><td>전자전 방어 작전</td><td>재밍 구역 진입 → 적 신호 탐지 → 귀환 복귀</td><td>10분</td><td>900점</td></tr>
+</table>
+<div class="note"><b>호위 미션</b>: 파란 방향 화살표가 보급드론 위치를 표시. 파란 수직 빔과 미니맵의 파란 마름모(LS-1)로도 위치 확인 가능<br><b>방어 수행 방법(NET-1)</b>: 22m 이내 접근 시 그물 자동 포획 | <b>(INT-K)</b>: 1200m LOCK → F키 발사</div>
+</div>
+
+<!-- ═══ 3. 비행 물리 ═══ -->
+<h2>③ 비행 물리 시뮬레이션</h2>
+<div class="section">
+<ul>
+<li><b>기종별 최고속도·최대고도</b> — 드론 데이터 기반 물리 적용</li>
+<li><b>4단계 난이도</b> — 초급(자동 안정화) / 중급 / 고급(실전 물리) / 전문가(완전 수동)</li>
+<li><b>중력·항력</b> — 스로틀 감소 시 중력에 의한 자연 하강</li>
+<li><b>바람 영향</b> — 풍향/풍속이 드론 궤도에 실시간 영향</li>
+<li><b>난기류</b> — 설정값에 따른 랜덤 흔들림</li>
+<li><b>배터리 소모</b> — 비행 시간 + 스로틀에 따른 소모. 방전 시 강제 착륙</li>
+<li><b>지형 충돌 감지</b> — 매 물리 프레임 레이캐스팅으로 드론 위치의 지형 높이 측정. 드론이 지형면 0.8m 이하 접근 시 폭발 이펙트 + <b>"지형 충돌 — 드론 추락"</b> 임무 실패 처리</li>
+<li><b>지형 충돌 바닥 보정</b> — 완만한 하강 시에는 드론 Y를 terrainH+0.8m로 클램프하여 지형을 관통하지 않음</li>
+<li><b>지면 충돌 방지</b> — 비임무 모드에서 최저 고도 0.5m 자동 제한</li>
+</ul>
+</div>
+
+<!-- ═══ 4. 3D 지형 ═══ -->
+<h2>④ 5종 절차적 3D 지형</h2>
+<div class="section">
+<table>
+<tr><th>지형</th><th>특징</th><th>오브젝트</th></tr>
+<tr><td>평야 — GOP 비무장지대</td><td>완만한 구릉, 녹색 초원</td><td>나무 80그루</td></tr>
+<tr><td>산악 — 강원도 산악지형</td><td>험준한 봉우리, 설원 정상, 부드러운 색상 그라디언트</td><td>나무 120그루·바위 최대 30개 (평탄 지역만 배치)</td></tr>
+<tr><td>해상 — 동해 해안선</td><td>반투명 바다 + 해안 절벽</td><td>육지 높이 4m 이상 지점에만 나무 40그루</td></tr>
+<tr><td>도심 — 시가전 훈련장</td><td>고층 건물 35개, 도로 격자</td><td>야간 창문 조명 효과, 건물 2m 지형 매립</td></tr>
+<tr><td>군 훈련장 — 실전 훈련맵</td><td>완만한 구릉 + 군 시설물</td><td>벙커 8개·군용 건물 2m 매립, 경사 필터 적용</td></tr>
+</table>
+</div>
+
+<!-- ═══ 5. 드론 3D 모델 ═══ -->
+<h2>⑤ 기종별 전용 3D 모델 (7종 빌더)</h2>
+<div class="section">
+<ul>
+<li><b>MQ-9 리퍼 (bMQ9)</b> — 6.6m 동체, V형 미익, AGM-114 헬파이어 ×4 파일런, SATCOM 돔, EO/IR 터렛, 3엽 후방 프로펠러, 항법등</li>
+<li><b>고정익 배회탄 (bLoitering)</b> — 날개 + 미익 + 후방 프로펠러, GPS 안테나</li>
+<li><b>쿼드콥터 정찰/일반 (bQuad)</b> — 4암 + 짐벌 카메라, 항법등</li>
+<li><b>공격형 쿼드콥터 (bBomberQuad)</b> — 폭탄 탑재 베이, 양측 탄두</li>
+<li><b>방어형 쿼드콥터 (bDefenseQuad)</b> — 위상배열 레이더 돔, 4방향 포탑, RF 안테나</li>
+<li><b>델타익 요격기 (bDeltaInterceptor)</b> — 스텔스 델타익, AESA 레이더, 시커, 엔진 후광</li>
+<li><b>헥사콥터 지원 (bSupport)</b> — 6암 + 돔 안테나, 화물함</li>
+</ul>
+</div>
+
+<!-- ═══ 6. 무기/전투 ═══ -->
+<h2>⑥ 무기·전투 시스템</h2>
+<div class="section">
+
+<h3>🚀 유도 미사일 (Fire-and-Forget)</h3>
+<ul>
+<li><b>비례 항법 유도 (Proportional Navigation)</b> — 조향력 dt×10.0으로 정밀 추적</li>
+<li><b>Lock-on 시스템</b> — 타격 800m / INT-K 1200m / NET-1 22m 이내 자동 잠금</li>
+<li><b>3D 명중 판정</b> — 3D 거리 14m 이내 폭발 (지형 높이 완전 반영)</li>
+<li><b>HP 시스템</b> — 목표물 hp:1 (헬파이어 1발=1파괴)</li>
+<li><b>연기 트레일</b> — 유도탄 비행 경로 연기 파티클 시각화</li>
+<li><b>화면 흔들림</b> — 명중 폭발 시 카메라 진동 0.55초 (강도 1.8)</li>
+<li><b>폭발 이펙트</b> — 화염 구체 + PointLight (대형 폭발 강도 10)</li>
+</ul>
+
+<h3>🛡 방어 시스템</h3>
+<ul>
+<li><b>NET-1 자동 포획</b> — 22m 이내 자동 그물 발사</li>
+<li><b>INT-K 요격 미사일</b> — 12발 탑재, 1200m Lock-on 범위</li>
+<li><b>적 드론 스폰</b> — INT-K 최대 12기 / 기타 10기, 6초 간격 스폰</li>
+</ul>
+</div>
+
+<!-- ═══ 7. HUD 시스템 ═══ -->
+<h2>⑦ HUD 시스템</h2>
+<div class="section">
+<table>
+<tr><th>HUD 요소</th><th>위치</th><th>표시 내용</th></tr>
+<tr><td>나침반 바</td><td>화면 상단 중앙</td><td>현재 방위각 (N/E/S/W 및 45도 간격 눈금)</td></tr>
+<tr><td>고도 테이프</td><td>화면 우측 중앙</td><td>현재 고도 m (실시간 갱신)</td></tr>
+<tr><td>속도 테이프</td><td>화면 좌측 중앙</td><td>현재 수평 속도 km/h</td></tr>
+<tr><td>자세 지시계</td><td>좌측 하단</td><td>피치·롤 시각화 인공 수평선</td></tr>
+<tr><td>스로틀 바</td><td>자세 지시계 우측</td><td>현재 스로틀 0~100% 수직 게이지</td></tr>
+<tr><td>미니맵</td><td>우측 하단</td><td>드론 위치, 목표물, 적 드론, 보급드론(파란 마름모)</td></tr>
+<tr><td>날씨 패널</td><td>좌측 상단</td><td>날씨/풍향/풍속/난기류</td></tr>
+<tr><td>임무 패널</td><td>우측 상단</td><td>미션명·목표 체크리스트</td></tr>
+<tr><td>미션 타이머</td><td>상단 중앙 (나침반 아래)</td><td>남은 제한 시간 (60초 이하 빨간색)</td></tr>
+<tr><td>Lock-on 박스</td><td>목표물 위치 추적</td><td>SEARCH→TRACK→🔴LOCK 상태 + 거리 표시</td></tr>
+<tr><td>방향 화살표</td><td>화면 하단 중앙</td><td>정찰=다음 목표 / 타격=가장 가까운 적 / 방어=보급드론·적 드론 방향</td></tr>
+<tr><td>공격 가이드 바</td><td>하단 중앙</td><td>Lock 상태, 목표 거리, 잔탄, F키 발사 안내</td></tr>
+<tr><td>탄약 HUD</td><td>우측 상단</td><td>🚀 잔탄 수 (공격/방어 미션)</td></tr>
+<tr><td>스캔 진행바</td><td>하단 중앙</td><td>정찰 중 스캔 완료 퍼센트</td></tr>
+<tr><td>상단 정보 바</td><td>화면 최상단</td><td>드론명·종류·배터리·비행시간·고도·모드·카메라·게임패드 상태</td></tr>
+<tr><td>경고 메시지</td><td>화면 중앙</td><td>저고도/배터리 부족/탄약 소진/보급드론 합류 등 점멸</td></tr>
+</table>
+</div>
+
+<!-- ═══ 8. 카메라 ═══ -->
+<h2>⑧ 카메라 시스템</h2>
+<div class="section">
+<ul>
+<li><b>3인칭 추적 카메라</b> — 드론 후방 12m 추적, 마우스 드래그로 360° 시점 조작</li>
+<li><b>1인칭 FPV 카메라</b> — 드론 탑재 카메라 시점, 롤 연동 기울기</li>
+<li><span class="kk">V</span> <b>시점 전환</b> — 비행 중 언제든 FPV ↔ 3인칭 전환</li>
+<li><b>자동 카메라 복귀</b> — 드래그 해제 후 드론 진행 방향으로 부드럽게 복귀</li>
+<li><b>화면 흔들림</b> — 폭발 명중 시 카메라 진동 이펙트 (0.55초)</li>
+</ul>
+</div>
+
+<!-- ═══ 9. 입력 ═══ -->
+<h2>⑨ 입력 시스템</h2>
+<div class="section">
+<table>
+<tr><th>키</th><th>동작</th></tr>
+<tr><td><span class="kk">W</span></td><td>전진</td></tr>
+<tr><td><span class="kk">S</span></td><td>후진</td></tr>
+<tr><td><span class="kk">A</span></td><td>좌측 이동</td></tr>
+<tr><td><span class="kk">D</span></td><td>우측 이동</td></tr>
+<tr><td><span class="kk">Q</span></td><td>좌회전 (요)</td></tr>
+<tr><td><span class="kk">E</span></td><td>우회전 (요)</td></tr>
+<tr><td><span class="kk">Space</span> / <span class="kk">Shift</span></td><td>상승 + 스로틀 증가</td></tr>
+<tr><td><span class="kk">X</span> / <span class="kk">Ctrl</span></td><td>하강 + 스로틀 감소</td></tr>
+<tr><td><span class="kk">F</span></td><td>무기 발사 (미사일/포획)</td></tr>
+<tr><td><span class="kk">V</span></td><td>카메라 시점 전환 (FPV ↔ 3인칭)</td></tr>
+<tr><td><span class="kk">↑↓←→</span></td><td>3인칭 카메라 조작</td></tr>
+<tr><td><span class="kk">ESC</span></td><td>일시정지</td></tr>
+<tr><td>마우스 드래그</td><td>3인칭 카메라 방향 조절</td></tr>
+</table>
+<div class="note">게임패드 (PS/Xbox): 좌스틱=전후좌우 / 우스틱=카메라 / L2=하강 / R2=상승 / △/Y=카메라 전환 / START=일시정지</div>
+<div class="note warn">⚠ Alt+Tab 등 창 포커스 이탈 시 모든 키 자동 해제 (키 고착 방지)</div>
+</div>
+
+<!-- ═══ 10. 환경 설정 ═══ -->
+<h2>⑩ 환경 설정 옵션</h2>
+<div class="section">
+<table>
+<tr><th>항목</th><th>선택지</th></tr>
+<tr><td>비행 모드</td><td>자유 비행 연습 / 상황별 미션</td></tr>
+<tr><td>드론 선택</td><td>20종 (정찰/공격/방어/지원/소형)</td></tr>
+<tr><td>카메라 시점</td><td>3인칭 추적 / 1인칭 FPV</td></tr>
+<tr><td>훈련 지형</td><td>평야 / 산악 / 해상 / 도심 / 군 훈련장</td></tr>
+<tr><td>날씨</td><td>맑음 / 흐림 / 비 / 안개 / 폭풍</td></tr>
+<tr><td>바람 세기</td><td>0~100% 슬라이더</td></tr>
+<tr><td>풍향</td><td>8방위 선택</td></tr>
+<tr><td>난기류</td><td>0~100% 슬라이더</td></tr>
+<tr><td>조종 방식</td><td>키보드 / 게임패드 / 키보드+게임패드</td></tr>
+<tr><td>조종 감도</td><td>20~180% 슬라이더</td></tr>
+<tr><td>난이도</td><td>초급(자동 안정) / 중급 / 고급 / 전문가</td></tr>
+<tr><td>시간대</td><td>주간 09:00 / 새벽 05:30 / 황혼 18:30 / 야간 22:00</td></tr>
+</table>
+</div>
+
+<!-- ═══ 11. 버그 수정 이력 ═══ -->
+<h2>⑪ 버그 수정 이력</h2>
+<div class="section">
+<ul>
+<li><span class="tag fix">FIX</span> <b>키 고착 버그</b> — Alt+Tab 등 창 포커스 이탈 시 Space 등 키가 계속 눌린 상태 유지 → <code>window.blur</code> 이벤트로 모든 키 초기화</li>
+<li><span class="tag fix">FIX</span> <b>나무 파란색 버그</b> — HemisphereLight 강도 과다(0.55)로 나무가 파랗게 보임 → 강도 0.32로 낮추고 초록 색상 팔레트 고정</li>
+<li><span class="tag fix">FIX</span> <b>타격 목표 지형 매몰</b> — 목표물이 지형 아래 묻히는 문제 → getTerrainH() 함수로 정확한 지형 높이 계산 후 배치</li>
+<li><span class="tag fix">FIX</span> <b>미사일 목표 통과</b> — 유도 목표 Y좌표가 2.5m 하드코딩으로 고지 목표 미스 → tg.position.y+1.8로 동적 계산</li>
+<li><span class="tag fix">FIX</span> <b>명중 판정 실패</b> — 2D 거리+절대 높이 판정으로 지형이 높으면 항상 실패 → 3D 거리 14m 이내 판정으로 변경</li>
+<li><span class="tag fix">FIX</span> <b>목표 6타 필요</b> — hp:3 × 2목표 = 6타인데 미사일 4발 → hp:1로 수정 (헬파이어 1발=1파괴)</li>
+<li><span class="tag fix">FIX</span> <b>풍속 NaN 표시</b> — 바람 수치 변환 오류 → ||0 방어 처리</li>
+<li><span class="tag fix">FIX</span> <b>INT-K 탄약 부족</b> — 적 10기 스폰인데 미사일 8발 → 12발로 증가</li>
+<li><span class="tag fix">FIX</span> <b>HUD 겹침</b> — #h-ammo, 미션타이머, 날씨패널이 나침반/탑바와 겹치는 문제 → 각 요소 위치 재배치</li>
+<li><span class="tag fix">FIX</span> <b>드론이 산 내부 통과</b> — 지형 충돌 감지 없음 → 매 프레임 레이캐스팅으로 terrainH 측정, 0.8m 이하 진입 시 폭발·임무 실패</li>
+<li><span class="tag fix">FIX</span> <b>나무·바위 공중 부양</b> — getTerrainH 공식 오차(최대 3.6m)로 오배치 → 레이캐스팅 방식으로 교체(오차=0), 경사 필터 추가</li>
+<li><span class="tag fix">FIX</span> <b>산악 지도 시작 시 즉시 충돌</b> — 고정 Y=12가 산 정상보다 낮음 → 13개 후보 중 최저·최평탄 지점 자동 선택, Y=terrainH+25 시작</li>
+<li><span class="tag fix">FIX</span> <b>해안선 나무 바다 위 배치</b> — 높이 검사 없음 → 높이 4m 이상·주변 12m 범위도 육지인 곳만 배치</li>
+<li><span class="tag fix">FIX</span> <b>군·도심 건물 공중 부양</b> — 0.8m 매립으로 요철 지형 대응 부족 → 2.0m 매립으로 확대</li>
+</ul>
+</div>
+
+<!-- ═══ 12. 기술 사양 ═══ -->
+<h2>⑫ 기술 사양</h2>
+<div class="section">
+<ul>
+<li><b>렌더러</b> — Three.js r128, WebGLRenderer, PCFSoftShadowMap (그림자 2048×2048)</li>
+<li><b>지형</b> — PlaneGeometry 2600×2600 세그먼트 280×280, Vertex Color, noise 함수 기반 절차적 생성, 색상 부드러운 그라디언트 전환</li>
+<li><b>지형 높이 조회</b> — THREE.Raycaster 다운캐스트 방식 (오차 0), 장면 오브젝트 배치·충돌 판정 모두 동일 함수 사용</li>
+<li><b>드론 물리</b> — 프레임 독립적 dt 기반 물리, 기종별 최고속도·최대고도 적용</li>
+<li><b>미사일 유도</b> — 비례 항법 (Proportional Navigation), 조향력 dt×10.0</li>
+<li><b>파티클</b> — 연기 트레일 Sphere 메시 풀 (_smokePool), 폭발 이펙트 PointLight</li>
+<li><b>입력</b> — 키보드 keydown/keyup + Gamepad API 폴링 + 마우스 드래그</li>
+<li><b>파일 구조</b> — index.html (구조+매뉴얼) / style.css (스타일) / game.js (엔진+게임로직)</li>
+</ul>
+</div>
+
+<footer>DRSIM-K v4.0 · ROK MILITARY DRONE SIMULATOR · 구현 기능 문서</footer>
+</div>
+</body>
+</html>

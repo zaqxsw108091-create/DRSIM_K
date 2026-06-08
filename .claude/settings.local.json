@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --input-type=module)",
+      "Bash(node -e ' *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(dir \"%TEMP%\\\\*.png\" /b /o-d)",
+      "PowerShell($f = Get-Item \"C:\\\\Users\\\\USER\\\\projects\\\\DRSIM_K\\\\screenshots\\\\gameplay.png\"; Write-Output \"$\\($f.Name\\) — $\\([math]::Round\\($f.Length/1KB\\)\\) KB\")",
+      "Bash(node --check game.js)",
+      "Skill(run)",
+      "Skill(run:*)"
+    ]
+  }
+}
