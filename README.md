@@ -50,7 +50,6 @@ DRSIM_K/
 ├── style.css           # All visual styling — military green terminal aesthetic
 ├── game.js             # Everything else: 3D engine init, physics, AI, missions, HUD logic
 ├── DRSIM-K_기능목록.html  # Feature reference document (Korean)
-├── DRSIM_K_CLAUDE.md   # Notes for the AI coding assistant used during development
 └── screenshots/
     └── gameplay.png
 ```
