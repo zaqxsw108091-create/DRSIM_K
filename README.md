@@ -1,5 +1,7 @@
 # DRSIM-K
 
+**한국어:** [README.ko.md](README.ko.md)
+
 > **ROK Military Drone Operator Training Simulator** — A browser-based 3D drone flight simulation for Republic of Korea military training scenarios, built entirely with vanilla JavaScript and Three.js, with no build tools or external frameworks.
 
 ---
