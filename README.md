@@ -17,7 +17,7 @@
 | **Three.js** | r128 (loaded via CDN `<script>` tag) |
 | **JavaScript** | Vanilla ES6+, `'use strict'`, no frameworks |
 | **Rendering** | WebGLRenderer · PCFSoftShadowMap · 2048×2048 shadow maps |
-| **Runtime** | Browser-native, `file://` protocol (no server needed) |
+| **Runtime** | Browser-native — open `index.html` directly (no server needed); needs an internet connection to load Three.js from the cdnjs CDN |
 | **Build tools** | **None** — single `game.js` file, open `index.html` directly |
 | **Input** | Keyboard `keydown/keyup` + Gamepad API polling + Mouse drag |
 
@@ -38,7 +38,7 @@ Then:
 2. Select drone, map, and mission → click "비행 개시"
 ```
 
-> **Note:** Because `file://` URLs block cross-origin requests, all assets are either inline or procedurally generated — there are no external image or audio files to load.
+> **Note:** Because `file://` URLs block cross-origin requests, all assets are either inline or procedurally generated — there are no external image or audio files to load. The only external resource is the Three.js script itself (cdnjs), so the first load needs internet access.
 
 ---
 
@@ -49,10 +49,13 @@ DRSIM_K/
 ├── index.html          # Shell: DOM layout, HUD elements, manual overlay, settings UI
 ├── style.css           # All visual styling — military green terminal aesthetic
 ├── game.js             # Everything else: 3D engine init, physics, AI, missions, HUD logic
-└── DRSIM-K_기능목록.html  # Feature reference document (Korean)
+├── DRSIM-K_기능목록.html  # Feature reference document (Korean)
+├── DRSIM_K_CLAUDE.md   # Notes for the AI coding assistant used during development
+└── screenshots/
+    └── gameplay.png
 ```
 
-The entire simulation — terrain generation, drone physics, missile guidance, mission state, camera, and HUD — lives in a **single `game.js` file (~1 600 lines)**. This was a deliberate choice: zero build overhead, instant iteration, and direct browser devtools debugging with no source-map step.
+The entire simulation — terrain generation, drone physics, missile guidance, mission state, camera, and HUD — lives in a **single `game.js` file (~2,000 lines)**. This was a deliberate choice: zero build overhead, instant iteration, and direct browser devtools debugging with no source-map step.
 
 ---
 
@@ -68,13 +71,15 @@ The entire simulation — terrain generation, drone physics, missile guidance, m
 | sonmi | SONMI-01 | 60 km/h | 300 m | 30 min |
 
 ### 🔴 Attack (5)
-| ID | Name | Speed | Ceiling | Armament |
+| ID | Name | Speed | Ceiling | Missiles in strike missions |
 |---|---|---|---|---|
-| mq9 | MQ-9 Reaper | 482 km/h | 15 000 m | Hellfire ×4 |
-| kh1 | KH-1 Strike | 200 km/h | 1 000 m | Loitering munition ×2 |
-| tb2 | Bayraktar TB2 | 222 km/h | 8 200 m | MAM-L ×2 |
-| swarm | SWARM-K | 80 km/h | 500 m | Micro-munition ×2 |
-| lm1 | LM-1 Loitering | 160 km/h | 4 500 m | Kamikaze ×2 |
+| mq9 | MQ-9 Reaper | 482 km/h | 15 000 m | 6 |
+| kh1 | KH-1 Strike | 200 km/h | 1 000 m | 4 |
+| tb2 | Bayraktar TB2 | 222 km/h | 8 200 m | 4 |
+| swarm | SWARM-K | 80 km/h | 500 m | 4 |
+| lm1 | LM-1 Loitering | 160 km/h | 4 500 m | 4 |
+
+> Missile counts come from the mission code (`initMisGameplay`): the large armed type (MQ-9) carries 6, every other drone carries 4. In defense missions INT-K carries 12 and other drones 99 (NET-1 captures enemy drones by proximity instead of firing). The missile type names (Hellfire, etc.) are flavor text only — the game uses one generic guided-missile model.
 
 ### 🟢 Defense (2)
 | ID | Name | Method |
@@ -113,7 +118,7 @@ Black Hornet 3 · NI-1 NanoEye · Puma AE · RQ-11 Raven · SkyRanger R70
 
 ### 1 — Procedural Terrain Generation
 
-**Code:** `buildTerrain()` (line ~212) and `noise(x, z)` (line ~288)
+**Code:** `buildTerrain()` and `noise(x, z)`
 
 ```js
 function noise(x, z) {
@@ -130,16 +135,18 @@ For each terrain type the same formula is called with different frequency scales
 
 ```js
 case 'mountain':
-  h = noise(x*.007, z*.006)*110   // large mountain ridges (low freq, high amp)
-    + noise(x*.018, z*.015)*42    // mid-sized valleys
-    + noise(x*.038, z*.032)*18    // rocky detail
-    + noise(x*.08,  z*.07 )*8    // surface roughness
-    + noise(x*.16,  z*.14 )*3;   // fine pebble texture
+  h = noise(x*.007, z*.006)*80    // large mountain ridges (low freq, high amp)
+    + noise(x*.018, z*.015)*28    // mid-sized valleys
+    + noise(x*.038, z*.032)*11    // rocky detail
+    + noise(x*.08,  z*.07 )*5     // surface roughness
+    + noise(x*.16,  z*.14 )*2;    // fine pebble texture
+  h *= 1 + 0.3*Math.abs(Math.sin(x*.004 + z*.003));  // slow ridge scaling
+  if (h > 50) h = 50 + (h-50)*0.55;                  // soften steep peaks
 ```
 
-Mountain terrain stacks **five octaves** (each doubling the frequency, halving the amplitude) — the classic fractal Brownian motion (fBm) technique. Plain terrain only needs two octaves because real flatlands have gentle, large-scale rolls.
+Mountain terrain stacks **five layers** of noise, each at a higher frequency and a lower amplitude — the idea behind fractal Brownian motion (fBm) — then scales the result with a slow ridge factor and softly compresses heights above 50 m so peaks don't become needles. Plain terrain uses only three gentle layers because real flatlands have gentle, large-scale rolls.
 
-A **separate `getTerrainH(x, z)` function** (line ~295) queries the terrain height at runtime using **Three.js Raycasting** — a ray is fired straight down from Y=2000 and intersected against the terrain mesh. This guarantees the returned height is identical to the rendered surface with zero formula or interpolation error. A fallback noise formula is used during the brief window before the mesh exists.
+A **separate `getTerrainH(x, z)` function** queries the terrain height at runtime using **Three.js Raycasting** — a ray is fired straight down from Y=2000 and intersected against the terrain mesh. This guarantees the returned height is identical to the rendered surface with zero formula or interpolation error. A fallback noise formula is used during the brief window before the mesh exists.
 
 ```js
 _rayOrig.set(x, 2000, z);
@@ -148,7 +155,7 @@ const hits = _RC.intersectObject(TERRAIN_MESH, false);
 if (hits.length > 0) return hits[0].point.y;
 ```
 
-**Terrain collision detection** (`updatePhys`, line ~860): every physics frame, `getTerrainH(GS.x, GS.z)` is compared to the drone's current altitude. If the drone descends below `terrainH + 0.8 m`, an explosion is triggered, the drone mesh is hidden, and the mission ends with `"지형 충돌 — 드론 추락"`. A floor clamp (`GS.y = Math.max(GS.y, terrainH + 0.8)`) prevents the drone from phasing through terrain at slow descent rates.
+**Terrain collision detection** (`updatePhys`): every physics frame, `getTerrainH(GS.x, GS.z)` is compared to the drone's current altitude. If the drone descends below `terrainH + 0.8 m`, an explosion is triggered, the drone mesh is hidden, and the mission ends with `"지형 충돌 — 드론 추락"`. A floor clamp (`GS.y = Math.max(GS.y, terrainH + 0.8)`) prevents the drone from phasing through terrain at slow descent rates.
 
 **Scene object placement** uses `getTerrainH` with strict slope filters: trees and rocks are only placed where the terrain height and the surrounding 4-point gradient both fall below tight thresholds, eliminating floating objects on steep hillsides. Buildings are embedded 2 m into the terrain so minor surface variation never causes them to appear airborne.
 
@@ -156,29 +163,30 @@ Vertex colors are baked directly into a `Float32Array` buffer attribute. Because
 
 ---
 
-### 2 — Proportional Navigation Missile Guidance
+### 2 — Missile Guidance (smoothed pure pursuit)
 
-**Code:** `updateProjectiles()` (line ~1426), guidance block at line ~1436
+**Code:** `updateProjectiles()` (guidance block)
 
 ```js
-// Proportional Navigation core:
+// Guidance core (smoothed pure pursuit):
 const turn = Math.min(1, dt * 10.0);
 m.vx += (dx/dist3 * curSpd - m.vx) * turn;
 m.vy += (dy/dist3 * curSpd - m.vy) * turn;
 m.vz += (dz/dist3 * curSpd - m.vz) * turn;
-// Re-normalize to constant 85 m/s
+// Re-normalize to the current speed (launch speed ≈ 90 m/s)
 const ns = Math.sqrt(m.vx*m.vx + m.vy*m.vy + m.vz*m.vz);
 if (ns > 0.1) { const n = curSpd/ns; m.vx*=n; m.vy*=n; m.vz*=n; }
 ```
 
 **Why this approach:**  
-True PN computes the **line-of-sight rotation rate** and steers proportionally to it — mathematically elegant but complex. The simplified version used here is equivalent: at each frame, blend the current velocity direction toward the *desired* direction (unit vector to target × speed). The `turn` factor `dt * 10.0` controls how aggressively the missile steers; higher values make it turn faster but can cause over-shoot on tight angles.
+True proportional navigation (PN) computes the **line-of-sight rotation rate** and steers proportionally to it — more accurate but more complex. This game uses a simpler method that is **not equivalent to PN** (smoothed pure pursuit): at each frame, blend the current velocity direction toward the *desired* direction (unit vector to target × speed). The `turn` factor `dt * 10.0` controls how aggressively the missile steers; higher values make it turn faster but can cause over-shoot on tight angles.
 
 Key design decisions:
 - **0.35-second arming delay** (`m.armT`) prevents the missile from immediately U-turning back at the drone at close range.
-- **Constant-speed re-normalization** after every guidance step keeps the missile at 85 m/s regardless of steering angle; without this, velocity bleeds off during sharp turns.
+- **Constant-speed re-normalization** after every guidance step keeps the missile at its launch speed (≈ 90 m/s) regardless of steering angle; without this, velocity bleeds off during sharp turns.
 - **Target Y offset +1.8 m** (`ty = tg.position.y + 1.8`) corrects a bug where missiles were aimed at the *base* of targets sitting on elevated terrain — they would fly into the hill below the vehicle instead of the vehicle itself.
-- **3D hit detection radius 14 m** (down from 8 m): real Hellfire warheads have a blast radius of ~12 m; 14 m was chosen to feel satisfying without making the game trivially easy.
+- **3D hit detection radius 14 m** against ground targets (9 m against enemy drones), measured to the target's centre: chosen to feel satisfying without making the game trivially easy.
+- **Unguided fire:** with no locked target (`F` pressed before a LOCK), the missile still launches, flies straight and drops under a simple gravity term (`vy -= 5*dt`).
 
 The missile mesh is oriented each frame using `quaternion.setFromUnitVectors(+X, velocityDir)` — because the cylinder body was built along the X axis, mapping +X to the velocity direction keeps the nose always pointing forward.
 
@@ -186,7 +194,7 @@ The missile mesh is oriented each frame using `quaternion.setFromUnitVectors(+X,
 
 ### 3 — Drone Physics Simulation
 
-**Code:** `handleInput()` (line ~772) and `updatePhys()` (line ~817)
+**Code:** `handleInput()` and `updatePhys()`
 
 ```js
 // World-space velocity integration (yaw-relative input)
@@ -213,7 +221,7 @@ GS.vy -= grav * dt * 10;
 Easy mode sets gravity to exactly **zero** so beginners can focus on navigation without fighting altitude. This required a bug fix: the original code used `{easy:.04}` (nonzero), and `||0.1` as fallback would replace even a valid `0` with `0.1`. The fix switched to `??` (nullish coalescing) which only substitutes when the value is `null` or `undefined`, preserving a deliberate `0`.
 
 **Drone-specific limits:**  
-Max speed and ceiling come directly from the DRONES data array (`d.spd`, `d.alt`). The physics cap position at `d.alt` and scale acceleration by `d.spd / 3.6` (km/h → m/s). This means a MQ-9 Reaper (`spd:482`) accelerates and moves 8× faster than a SONMI-01 (`spd:60`) with identical key presses — no separate tuning per drone.
+Max speed and ceiling come directly from the DRONES data array (`d.spd`, `d.alt`). The physics cap altitude at `d.alt` and scale acceleration by `d.spd / 3.6 × 2.5 × sensitivity` (km/h → m/s); there is no hard speed limit — top speed emerges from that acceleration balanced against the per-frame damping `stab` (applied per frame, not per second). This means a MQ-9 Reaper (`spd:482`) accelerates and moves 8× faster than a SONMI-01 (`spd:60`) with identical key presses — no separate tuning per drone.
 
 **Bank/pitch visuals:**  
 ```js
@@ -226,7 +234,7 @@ These set the visual tilt of the drone mesh (`DRONE.rotation.x/z`) but do *not* 
 
 ### 4 — 3D Drone Model Builders
 
-**Code:** 7 builder functions `bLoitering`, `bMQ9`, `bQuad`, `bBomberQuad`, `bDefenseQuad`, `bDeltaInterceptor`, `bSupport` (lines ~478–680)
+**Code:** 7 builder functions `bLoitering`, `bMQ9`, `bQuad`, `bBomberQuad`, `bDefenseQuad`, `bDeltaInterceptor`, `bSupport` (just after `buildDroneMesh()`)
 
 **Why procedural geometry instead of `.obj`/`.glb` files:**  
 Three reasons: (1) `file://` protocol blocks cross-origin resource loads, making external asset loading unreliable; (2) no asset pipeline or export step required; (3) every vertex color, emissive glow, and wing angle can be tuned by changing a number.
@@ -250,7 +258,7 @@ All builders place the nose at +X. The `inner` group's `rotation.y = π/2` maps 
 
 ### 5 — 3rd-Person Chase Camera
 
-**Code:** `updateCamera()` (line ~843), 3rd-person block at line ~866
+**Code:** `updateCamera()` (3rd-person block)
 
 ```js
 // Camera sits BEHIND the drone at all headings
@@ -275,22 +283,22 @@ The `(+3π) % 2π - π` formula wraps the angle difference into `[-π, +π]` so 
 
 ### 6 — Particle Systems
 
-**Smoke trail** (`_smokePool`, line ~1406):  
+**Smoke trail** (`_smokePool`):  
 Small `SphereGeometry` meshes are spawned every 45 ms along the missile's path. Each particle lives 0.8–1.3 seconds, scales up from 1× to 3.8× over its lifetime (billowing expansion), and fades its `opacity` from 0.35 to 0. Particles rise slowly (`position.y += dt*.5`). The pool is iterated **backwards** with splice-in-place so removal doesn't skip elements — a standard game dev pattern.
 
-**Explosion** (`spawnExp`, line ~1512):  
+**Explosion** (`spawnExp`):  
 A `MeshStandardMaterial` sphere expands and fades. A `PointLight` with intensity 10 (large explosion) or 5 (small) illuminates surrounding geometry for ~0.35 seconds. The light intensity decays each frame by `*= (1 - dt*5)`. Both the mesh and light share the same `GMS.explosions` array by tagging entries with `isLight: true` — avoiding a second loop or a second array.
 
-**Camera shake** (`triggerShake`, line ~1403):  
-A `_shakeT` timer counts down from 0.55 seconds. During each render frame, the camera position is jittered by `± _shakeAmt * (_shakeT/0.55) * random`. Dividing by 0.55 produces an **ease-out envelope**: full shake at the start, tapering to zero. Intensity 1.8 for large explosions, 1.2 for enemy hits.
+**Camera shake** (`triggerShake`):  
+A `_shakeT` timer counts down from 0.55 seconds. During each render frame, each camera axis is jittered by up to ±0.3 × `_shakeAmt` × (`_shakeT`/0.55) (the Y axis at half that). Dividing by 0.55 produces an **ease-out envelope**: full shake at the start, tapering to zero. Intensity 1.8 for large explosions, 1.2 for enemy hits.
 
 ---
 
 ### 7 — Lock-on and Targeting HUD
 
-**Code:** `updateHUD()` lock-on section (line ~900 area)
+**Code:** `updateLockOn()`
 
-The lock-on system projects each target from 3D world space to 2D screen space each frame using `target.mesh.position.project(CAM)`. If the NDC coordinates fall within ±0.55 of screen center, the target is considered "in view." Distance determines the state: `SEARCH` → `TRACK` → `🔴 LOCK` as the drone closes from 800 m to lock range. The HTML overlay box is positioned by converting NDC to pixel coordinates: `x = (ndcX + 1) / 2 * innerWidth`.
+The lock-on system projects each target from 3D world space to 2D screen space each frame using `target.mesh.position.project(CAM)`. The target closest to the screen centre wins (score = 80 % screen-centre distance + 20 % world distance). Its distance then sets the state: `SEARCH` → `TRACK` (within 1.6× the lock range) → `🔴 LOCK` (within the lock range: 800 m for strike missions, 1 200 m for INT-K, 35 m for other defense drones). The HTML overlay box is positioned by converting NDC to pixel coordinates: `x = (ndcX + 1) / 2 * innerWidth`.
 
 This approach was chosen over raycasting (`Raycaster.intersectObjects`) because raycasting fires a ray through the *exact* mouse/center pixel, which is brittle for tracking a target that may be slightly off-center. Screen-space distance allows a generous capture radius.
 
@@ -334,7 +342,7 @@ The mission timer uses `GS.tl -= dt` (raw seconds) and colors the display red be
 | F | Fire weapon (missile / net capture) |
 | V | Toggle FPV ↔ 3rd-person |
 | Arrow keys | Orbit 3rd-person camera |
-| ESC | Pause |
+| ESC / P | Pause |
 | Mouse drag | Rotate 3rd-person camera |
 
 **Gamepad:** Left stick = move · Right stick = camera · L2 = descend · R2 = ascend · △/Y = camera toggle · START = pause
@@ -368,10 +376,11 @@ The mission timer uses `GS.tl -= dt` (raw seconds) and colors the display red be
 
 ## Test Results — All 20 Drones × All 8 Missions
 
-All 20 drones were tested against their matching mission categories:
-- **정찰 (Recon) drones** → recon missions (recon, rescue, nbc, night) ✅
-- **공격 (Attack) drones** → attack missions (intercept, strike) ✅
-- **방어 (Defense) drones** → defense missions (escort, jamming) ✅
-- **지원 / 소형** → free-flight and cross-category ✅
+Verified on 2026-11-08 with an automated browser run against a local copy of the repository:
 
-**No crashes, no mission-blocking bugs** after the 18 fixes listed above. Terrain collision destruction confirmed on all 5 maps. Scene objects verified grounded on mountain, coastal, and military maps.
+- All **20 drones** were started in all **8 missions** (**160 combinations**), rotating through all 5 maps (Normal difficulty, clear weather, daytime).
+- For each run: wait for the mission briefing, dismiss it, hold `W` + `Space` for about 1.5 s while pressing `F` three times, then return to the menu.
+- **Result: 160 / 160 runs started and kept flying, with no `NaN` positions and no JavaScript errors.**
+- Two real bugs were found during this check and fixed: pressing `Esc`/`P` on the menu opened the pause window (and could start a loop with no scene), and resizing the window after leaving a flight threw an error.
+
+**Not covered by this check:** gamepad input, FPV camera mode, weather / time-of-day variants other than clear-day, completing each mission (win/lose paths), long flights, and performance on low-end devices.

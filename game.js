@@ -209,7 +209,7 @@ function init3D(){
   mmCtx=$('mm').getContext('2d');
   isFPV=C.cam==='fpv';
 
-  window.onresize=()=>{R.setSize(innerWidth,innerHeight);CAM.aspect=innerWidth/innerHeight;CAM.updateProjectionMatrix();};
+  window.onresize=()=>{if(!R||!CAM)return;R.setSize(innerWidth,innerHeight);CAM.aspect=innerWidth/innerHeight;CAM.updateProjectionMatrix();};
 }
 
 // ─── TERRAIN ─────────────────────────────────
@@ -1972,6 +1972,7 @@ function loop(ts=0){
 // PAUSE / EXIT
 // ════════════════════════════════════════
 function togglePause(){
+  if(!SCN) return; // 게임 장면이 없을 때(메뉴·로딩 화면)는 일시정지 무시
   if($('m-end').classList.contains('on')) return;
   GS.paused=!GS.paused;
   $('esc-mod').classList.toggle('on',GS.paused);

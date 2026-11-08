@@ -6,22 +6,23 @@ Three.js 기반 브라우저 실행, 실제 드론 조종 훈련 목적.
 
 ## 기술 스택
 - Three.js (3D 렌더링)
-- HTML/CSS/JavaScript (단일 파일 구조)
-- Web Audio API (드론 효과음)
+- HTML/CSS/JavaScript (index.html + style.css + game.js)
 - Gamepad API (조이스틱 지원)
 
 ## 핵심 기능
-- FPV 드론 비행 물리 시뮬레이션
-- 한국 지형/환경 맵
-- 키보드 + 조이스틱 조종 지원
-- 충돌 감지 시스템
-- 비행 기록 저장
+- 드론 비행 물리 시뮬레이션 (FPV / 3인칭 시점)
+- 5종 맵(평야·산악·해상·도심·군 훈련장), 날씨·시간대 설정
+- 키보드 + 게임패드 조종 지원
+- 지형 충돌 감지
+- 미션 8종, 드론 20종
+- (미구현: 효과음, 비행 기록 저장)
 
 ## 조종 키 설정
-- W/S: 전진/후진 (Pitch)
-- A/D: 좌/우 이동 (Roll)
+- W/S: 전진/후진
+- A/D: 좌/우 이동
 - Q/E: 좌/우 회전 (Yaw)
-- Space/Shift: 상승/하강 (Throttle)
+- Space/Shift: 상승, X/Ctrl: 하강
+- F: 발사, V: 시점 전환, ESC/P: 일시정지
 
 ## AI 어시스턴트 규칙
 - 한국어로 답해줘
